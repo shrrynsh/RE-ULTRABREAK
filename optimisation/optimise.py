@@ -101,8 +101,8 @@ def main():
     optimizer = optim.Adam([adv_patch], lr=lr) # tune the learning rate
 
     # Training loop
-    num_epochs = 5000 
-    patience = 5000  # Number of epochs to wait before stopping
+    num_epochs = 1300
+    patience = 1300  # Number of epochs to wait before stopping
     best_loss = float('inf')
     best_img = None
     no_improve_count = 0
