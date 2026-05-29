@@ -1,7 +1,9 @@
 from PIL import Image
+import sys
 
 from llava16_adapter import Llava16Adapter
 from qwen2_adapter import Qwen2Adapter
+from tqdm import tqdm
 
 import torch.optim as optim
 
@@ -14,6 +16,7 @@ import random
 import os
 import json
 import pickle
+
 
 
 def initialise_patch(device, patch_size, image_path=None):
@@ -109,7 +112,9 @@ def main():
     
     losses = []
 
-    for epoch in range(base_epoch, num_epochs):
+    pbar = tqdm(range(base_epoch, num_epochs), desc="Optimizing", total=num_epochs - base_epoch)
+
+    for epoch in pbar:
         start_time = time.time()
         optimizer.zero_grad()   
         text_loss = 0
@@ -145,12 +150,12 @@ def main():
         if epoch % 20 == 0:
             # check output periodically
             with torch.no_grad():
-                print("saving..")
+                tqdm.write("saving..")
                 save_path = f"outputs/{exp_name}/{epoch}.png"
                 save_tensor_as_image(adv_patch, save_path)
 
                 for model in ensemble:
-                    print(model.generate(target_df.iloc[0]['text'], save_path))
+                    tqdm.write(str(model.generate(target_df.iloc[0]['text'], save_path)))
 
             # record the losses periodically
             df = pd.DataFrame(losses) 
@@ -168,7 +173,8 @@ def main():
         end_time = time.time()
         epoch_duration = end_time - start_time
         # Print loss for monitoring
-        print(f"Epoch {epoch}: Avg Loss = {total_loss}, Text Loss = {text_loss/ (len(target_df) * len(ensemble))}, TV Loss = {tv_loss * tv_weight}, L2 Loss = {l2_loss * l2_weight}, Time Spent = {epoch_duration}s")
+        tqdm.write(f"Epoch {epoch}: Avg Loss = {total_loss}, Text Loss = {text_loss/ (len(target_df) * len(ensemble))}, TV Loss = {tv_loss * tv_weight}, L2 Loss = {l2_loss * l2_weight}, Time Spent = {epoch_duration}s")
+        pbar.set_postfix(loss=f"{total_loss.item():.4f}")
 
         loss_dict = {
             'epoch': epoch,
@@ -185,10 +191,11 @@ def main():
         
         # Early stopping condition
         if no_improve_count >= patience:
-            print(f"Early stopping at epoch {epoch}. Reverting to best model state.")
+            tqdm.write(f"Early stopping at epoch {epoch}. Reverting to best model state.")
             adv_patch.data = best_img.data  # Revert to best saved state
             break  # Exit training loop
 
+    pbar.close()
     save_tensor_as_image(adv_patch, f"outputs/{exp_name}/adv_patch_{epoch}.png")
     
     return
