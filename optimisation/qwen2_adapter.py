@@ -178,7 +178,13 @@ class Qwen2Adapter(BaseModelAdapter):
             transformed_patch = self.preprocess_patched(patch, image_grid_thw)
             return transformed_patch.unsqueeze(0).expand(B, -1, -1) 
      
-        patched_img = apply_random_patch( empty_img, patch, scale_range=(0.8, 1.2), rotation_range=(-15, 15))       
+        patched_img = apply_random_patch(
+            empty_img,
+            patch,
+            scale_range=(0.8, 1.2),
+            rotation_range=(-15, 15),
+            translation_range=(0, 112),
+        )       
         transformed_patch = self.preprocess_patched(patched_img, image_grid_thw)
 
         # Create a mask for regions not equal to -1

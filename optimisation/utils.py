@@ -16,7 +16,14 @@ import math
 
 OPENAI_CLIP_MEAN = (0.48145466, 0.4578275, 0.40821073)
 OPENAI_CLIP_STD = (0.26862954, 0.26130258, 0.27577711)
-def apply_random_patch(image_tensor, patch, verbose=False, scale_range=(0.8, 1.2), rotation_range=(-15, 15)):
+def apply_random_patch(
+    image_tensor,
+    patch,
+    verbose=False,
+    scale_range=(0.8, 1.2),
+    rotation_range=(-15, 15),
+    translation_range=(0,112),
+):
     """
     Applies a differentiably transformed patch to a clone of the input image.
     
@@ -81,8 +88,21 @@ def apply_random_patch(image_tensor, patch, verbose=False, scale_range=(0.8, 1.2
     # Random placement (ensure it fits)
     if tph > H or tpw > W:
         raise ValueError("Transformed patch is too large for the image. Consider reducing scale_range.")
-    top = random.randint(0, H - tph)
-    left = random.randint(0, W - tpw)
+
+    if translation_range is None:
+        top_min, top_max = 0, H - tph
+        left_min, left_max = 0, W - tpw
+    else:
+        top_min, top_max = translation_range
+        left_min, left_max = translation_range
+
+        top_min = max(0, min(top_min, H - tph))
+        top_max = max(top_min, min(top_max, H - tph))
+        left_min = max(0, min(left_min, W - tpw))
+        left_max = max(left_min, min(left_max, W - tpw))
+
+    top = random.randint(top_min, top_max)
+    left = random.randint(left_min, left_max)
 
     # Region from image
     region = image_tensor[:, top:top+tph, left:left+tpw].unsqueeze(0)  # [1, C, tph, tpw]

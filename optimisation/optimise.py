@@ -2,7 +2,7 @@ from PIL import Image
 import sys
 
 from llava16_adapter import Llava16Adapter
-from qwen2_adapter import Qwen2Adapter
+from qwen2_adapter import Qwen2Adapter, OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 from tqdm import tqdm
 
 import torch.optim as optim
@@ -16,6 +16,8 @@ import random
 import os
 import json
 import pickle
+
+from utils import project_patch
 
 
 
@@ -109,6 +111,8 @@ def main():
 
     tv_weight = 0.5
     l2_weight = 0.0
+    projection_scale = OPENAI_CLIP_STD
+    projection_shift = OPENAI_CLIP_MEAN
     
     losses = []
 
@@ -142,7 +146,8 @@ def main():
         optimizer.step()
         
         #print("Patch min:", adv_patch.min().item(), "Patch max:", adv_patch.max().item())   
-        # Clamp the image to keep valid values
+        # Apply the paper-style affine projection, then clamp to valid pixel range.
+        adv_patch.data = project_patch(adv_patch.data, projection_scale, projection_shift)
         adv_patch.data = torch.clamp(adv_patch.data, 0, 1)
 
       
